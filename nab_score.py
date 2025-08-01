@@ -1,47 +1,22 @@
-from requests import get
-from pprint import PrettyPrinter
+import requests
 
-BASE_URL = "https://data.nba.net"
-ALL_JSON = "/prod/v1/today.json"
+def get_scoreboard_for_today():
+    # Example working endpoint hosted on cdn.nba.com
+    url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': 'https://www.nba.com',
+        'Referer': 'https://www.nba.com'
+    }
 
-printer = PrettyPrinter()
+    response = requests.get(url, headers=headers, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    return data.get('scoreboard', {}).get('games', [])
 
-
-def get_links():
-    data = get(BASE_URL + ALL_JSON).json()
-    links = data['links']
-    return links
-
-
-def get_scoreboard():
-    scoreboard = get_links()['currentScoreboard']
-    games = get(BASE_URL + scoreboard).json()['games']
-
+if __name__ == "__main__":
+    games = get_scoreboard_for_today()
     for game in games:
-        home_team = game['hTeam']
-        away_team = game['vTeam']
-        clock = game['clock']
-        period = game['period']
-
-        print("------------------------------------------")
-        print(f"{home_team['triCode']} vs {away_team['triCode']}")
-        print(f"{home_team['score']} - {away_team['score']}")
-        print(f"{clock} - {period['current']}")
-
-
-def get_stats():
-    stats = get_links()['leagueTeamStatsLeaders']
-    teams = get(
-        BASE_URL + stats).json()['league']['standard']['regularSeason']['teams']
-
-    teams = list(filter(lambda x: x['name'] != "Team", teams))
-    teams.sort(key=lambda x: int(x['ppg']['rank']))
-
-    for i, team in enumerate(teams):
-        name = team['name']
-        nickname = team['nickname']
-        ppg = team['ppg']['avg']
-        print(f"{i + 1}. {name} - {nickname} - {ppg}")
-
-
-get_stats()
+        print(game.get('gameId'), game.get('homeTeam', {}).get('teamName'),
+              "vs", game.get('awayTeam', {}).get('teamName'))
